@@ -1,0 +1,12 @@
+[deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+JuliaZH = "652e05fd-ed22-5b6c-bf99-44e63a676e5f"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+OhMyREPL = "5fb14364-9ced-5910-84b2-373655c76a03"
+Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
+PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
+QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+SymPy = "24249f21-da20-56a4-8eb1-6a02cf4ae2e6"
+TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
