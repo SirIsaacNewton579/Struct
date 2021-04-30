@@ -1,8 +1,8 @@
 using LinearAlgebra
 using PyPlot
 
-includet("Structdefine.jl")
-includet("Structsolve.jl")
+include("Structdefine.jl")
+include("Structsolve.jl")
 
 
 st = Struct(
