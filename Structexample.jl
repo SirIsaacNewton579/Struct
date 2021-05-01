@@ -52,6 +52,7 @@ se = [x[ssval+1+12(i-1):ssval+12+12(i-1)] for i =1:length(el)]
 node_index = [nodeonele(i,el) for i = 1:length(node)]
 u = [se[findfirst(!isempty,ni)][(1:2) .+ 6*(first(ni[findfirst(!isempty,ni)])-1)] for ni in node_index]
 PyPlot.pygui(true)
+PyPlot.figure()
 for eli in el
     plot([node[eli.enode[1]][1],node[eli.enode[2]][1]],[node[eli.enode[1]][2],node[eli.enode[2]][2]])
 end
