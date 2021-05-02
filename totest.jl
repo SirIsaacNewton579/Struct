@@ -34,10 +34,11 @@ plot_moment(st)
 
 st2 = Struct([[0.0,0.0],[1.0,0.0]],
 [Element([1,2],1e9,1e-3,1e-6,[[true,true,false],[false,true,false]])],
-[Disturbutionforce(1,[0,1],s->[0,-10e3*s,0],isgb)],
+[Disturbutionforce(1,[0,1],s->[0,-10e3*s,0],isgb),Concentratedforce(1,0.5,[0,-10e3,0],isgb)],
 [Support(1,[true,true,false]),Support(2,[false,true,false])]
 )
 build_A(st2)
 solvestruct(st2)
 plot_orign(st2)
 plot_moment(st2)
+plot_shear(st2)

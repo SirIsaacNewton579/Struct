@@ -10,7 +10,6 @@ end
 function loadoneli(load :: Vector{Load}, eli :: Int64)
     findall([loadi.elementcode == eli for loadi in load])
 end
-
 function leftsectionforcecurves(Fₗ)
     Fx = Fₗ[1];Fy = Fₗ[2];M = Fₗ[3];
     prapd =x->[[Fx;Fy;0],[Fx*x;Fy*x;-M],[0;1/2*Fy*x^2;-M*x],[0;1/6*Fy*x^3;-1/2*M*x^2]]
@@ -177,7 +176,7 @@ function single_element_equilibrium!(A,
         F_local = T*F;
         loac = loadi.loaction
         b[1:3] +=  -F
-        b[3] +=  F_local[2]*loac*l
+        b[3] +=  F_local[2]*(1-loac)*l
         
     end
     function consider_load_equilibrium!(loadi :: Disturbutionforce)
@@ -187,14 +186,12 @@ function single_element_equilibrium!(A,
         F = loadi.fgol ? loadi.magnitude : x->T\loadi.magnitude(x)
         
         ~,pnapd = forcecurves(F,x1,x2,l)
-        
-        
+
         pnapd =  [(i(l)) for i in pnapd]
         num_∫ⁿF =  [T*i for i in pnapd]
         b[1:3] +=  -pnapd[1]
         b[3] +=  num_∫ⁿF[2][2]
         #@show b
-        
     end
     function consider_load_equilibrium!(loadi :: Uniformforce)
         loac = loadi.loaction
@@ -212,7 +209,6 @@ function single_element_equilibrium!(A,
         
         b[1:3] +=  -∫F
         b[3] +=  num_∫²F[2]
-        
     end
 
     b = zeros(3)
@@ -286,7 +282,6 @@ function single_element_displacement!(A,
         num_∫⁴F = T*∫⁴F
         
         b[1] +=  num_∫²F[1]/EA  #u
-        
         b[2] += (-num_∫⁴F[2] + num_∫³F[3])/EI #v
         b[3] +=  (-num_∫³F[2] + num_∫²F[3])/EI  #θ
     end
@@ -316,7 +311,6 @@ function single_element_displacement!(A,
     temp[end]=b[2]
     push!(A,temp)
                 
-
     #θ
     temp = zeros(nvalue+1)
     temp[(i-1)*12+sum(svalue)+3] = 1
@@ -325,7 +319,6 @@ function single_element_displacement!(A,
     temp[(i-1)*12+sum(svalue) .+ collect(4:5)] = +1/2*l^2/EI*ey_local
     temp[end]=b[3]
     push!(A,temp)
-
 end
 
 function build_A_consider_equilibrium_and_displacement!(A,
@@ -335,9 +328,7 @@ function build_A_consider_equilibrium_and_displacement!(A,
     nvalue,svalue)
     # equilibrium equations and displacement equations
     for i = 1:length(el)
-        
         single_element_equilibrium!(A,node,el[i],i,load,nvalue,svalue)
-
         single_element_displacement!(A,node,el[i],i,load,nvalue,svalue)
     end
 end
@@ -411,7 +402,13 @@ function internalforcedispsingle(node :: Vector{Vector{Float64}} ,
         fx2tol = s->[(x2<s<=l ? f3[i](s) : [0;0;0]) for i = 1:4]
         fx1tox2,fx2tol
     end
-    
+    function build_forcecurves(loadi :: Concentratedforce)
+        loac = loadi.loaction
+        F = loadi.fgol ? loadi.magnitude : T\loadi.magnitude
+        f1 = leftsectionforcecurves(F)
+        fxtol = s->(s>=loac ? f1(s-loac) : fill(zeros(3),4))
+        fxtol,s->fill(zeros(3),4)
+    end
     fbase = leftsectionforcecurves(endpointforce[1:3])
     loadidx = loadoneli(load,i)
     loadidxlen = length(loadidx)
