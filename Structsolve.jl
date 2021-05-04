@@ -14,7 +14,7 @@ function leftsectionforcecurves(Fₗ)
     Fx = Fₗ[1];Fy = Fₗ[2];M = Fₗ[3];
     prapd =x->[[Fx;Fy;0],[Fx*x;Fy*x;-M],[0;1/2*Fy*x^2;-M*x],[0;1/6*Fy*x^3;-1/2*M*x^2]]
 end
-function forcecurves(F :: Function,x1,x2,l; Fₗ=[0.0;0.0;0.0])
+function forcecurves(F :: Function,x1,x2,l)
     try 
         t = Taylor1(Float64, 10)
         p0 = F(t) 
@@ -170,7 +170,7 @@ function single_element_equilibrium!(A,
     ex_local = (gcn2-gcn1)/l
     ey_local = [-ex_local[2];ex_local[1]]
     T = [transpose(ex_local) 0;transpose(ey_local) 0; 0 0 1]
-           
+    # @show T       
     function consider_load_equilibrium!(loadi :: Concentratedforce)
         F = loadi.fgol ? loadi.magnitude : T\loadi.magnitude
         F_local = T*F;
@@ -183,32 +183,26 @@ function single_element_equilibrium!(A,
         loac = loadi.loaction
         x1 =  loac[1]*l;x2 = loac[2]*l;
         #@show l
-        F = loadi.fgol ? loadi.magnitude : x->T\loadi.magnitude(x)
+        F = loadi.fgol ? x->T*loadi.magnitude(x) : loadi.magnitude
         
         ~,pnapd = forcecurves(F,x1,x2,l)
 
-        pnapd =  [(i(l)) for i in pnapd]
-        num_∫ⁿF =  [T*i for i in pnapd]
-        b[1:3] +=  -pnapd[1]
+        num_∫ⁿF =  [i(l) for i in pnapd]
+        b[1:3] +=  -T\num_∫ⁿF[1]
         b[3] +=  num_∫ⁿF[2][2]
-        #@show b
+        # @show b
     end
     function consider_load_equilibrium!(loadi :: Uniformforce)
         loac = loadi.loaction
         x1 =  loac[1]*l;x2 = loac[2]*l;
-        F = loadi.fgol ? loadi.magnitude : T\loadi.magnitude
+        F = loadi.fgol ? T*loadi.magnitude : loadi.magnitude
         ∫F = F*(x2-x1)
         ∫²F = F/2*((l-x1)^2-(l-x2)^2)
         ∫³F = F/6*((l-x1)^3-(l-x2)^3)
         ∫⁴F = F/24*((l-x1)^4-(l-x2)^4)
-        
-        num_∫F = T*∫F
-        num_∫²F = T*∫²F
-        num_∫³F = T*∫³F
-        num_∫⁴F = T*∫⁴F
-        
-        b[1:3] +=  -∫F
-        b[3] +=  num_∫²F[2]
+       
+        b[1:3] +=  -T\∫F
+        b[3] +=  ∫²F[2]
     end
 
     b = zeros(3)
@@ -255,14 +249,12 @@ function single_element_displacement!(A,
     function consider_load_displacement!(loadi :: Disturbutionforce)
         loac = loadi.loaction
         x1 =  loac[1]*l;x2 = loac[2]*l;
-        F = loadi.fgol ? loadi.magnitude : x->T\loadi.magnitude(x)
+        F = loadi.fgol ? x->T*loadi.magnitude(x) : loadi.magnitude
 
         ~,pnapd = forcecurves(F,x1,x2,l)
 
-        pnapd =  [(i(l)) for i in pnapd]
-        num_∫ⁿF =  [T*i for i in pnapd]
+        num_∫ⁿF =  [i(l) for i in pnapd]
         b[1] +=  num_∫ⁿF[2][1]/EA  #u
-        
         b[2] += (-num_∫ⁿF[4][2] + num_∫ⁿF[3][3])/EI #v
         b[3] +=  (-num_∫ⁿF[3][2] + num_∫ⁿF[2][3])/EI  #θ
         # @show b
@@ -270,20 +262,15 @@ function single_element_displacement!(A,
     function consider_load_displacement!(loadi :: Uniformforce)
         loac = loadi.loaction
         x1 =  loac[1]*l;x2 = loac[2]*l;
-        F = loadi.fgol ? loadi.magnitude : T\loadi.magnitude
+        F = loadi.fgol ? T*loadi.magnitude : loadi.magnitude
         ∫F = F*(x2-x1)
         ∫²F = F/2*((l-x1)^2-(l-x2)^2)
         ∫³F = F/6*((l-x1)^3-(l-x2)^3)
         ∫⁴F = F/24*((l-x1)^4-(l-x2)^4)
-
-        num_∫F = T*∫F
-        num_∫²F = T*∫²F
-        num_∫³F = T*∫³F
-        num_∫⁴F = T*∫⁴F
-        
-        b[1] +=  num_∫²F[1]/EA  #u
-        b[2] += (-num_∫⁴F[2] + num_∫³F[3])/EI #v
-        b[3] +=  (-num_∫³F[2] + num_∫²F[3])/EI  #θ
+       
+        b[1] +=  ∫²F[1]/EA  #u
+        b[2] += (-∫⁴F[2] + ∫³F[3])/EI #v
+        b[3] +=  (-∫³F[2] + ∫²F[3])/EI  #θ
     end
 
     b = zeros(3,1)
@@ -396,7 +383,7 @@ function internalforcedispsingle(node :: Vector{Vector{Float64}} ,
     function build_forcecurves(loadi :: Disturbutionforce)
         loac = loadi.loaction
         x1 =  loac[1]*l;x2 = loac[2]*l;
-        F = loadi.fgol ? loadi.magnitude : x->T\loadi.magnitude(x)
+        F = loadi.fgol ? x->T*loadi.magnitude(x) : loadi.magnitude
         f2,f3 = forcecurves(F,x1,x2,l)
         fx1tox2 = s->[(x1<=s<=x2 ? f2[i](s) : [0;0;0]) for i = 1:4]
         fx2tol = s->[(x2<s<=l ? f3[i](s) : [0;0;0]) for i = 1:4]
@@ -404,7 +391,7 @@ function internalforcedispsingle(node :: Vector{Vector{Float64}} ,
     end
     function build_forcecurves(loadi :: Concentratedforce)
         loac = loadi.loaction
-        F = loadi.fgol ? loadi.magnitude : T\loadi.magnitude
+        F = loadi.fgol ? T*loadi.magnitude : loadi.magnitude
         f1 = leftsectionforcecurves(F)
         fxtol = s->(s>=loac ? f1(s-loac) : fill(zeros(3),4))
         fxtol,s->fill(zeros(3),4)
@@ -419,7 +406,7 @@ function internalforcedispsingle(node :: Vector{Vector{Float64}} ,
     θ = s->(endpointdisplacement[3]+1/EI*(fbase(s)[3][3]+fbase(s)[3][2]))
     w = s->(endpointdisplacement[2]+endpointdisplacement[3]*s+1/EI*(fbase(s)[4][3]+fbase(s)[4][2]))
     for k = 1:loadidxlen
-        fx1tox2,fx2tol = build_forcecurves(load[k])
+        fx1tox2,fx2tol = build_forcecurves(load[loadidx[k]])
         N += s->( -fx1tox2(s)[1][1] - fx2tol(s)[1][1])
         u += s->1/EA*(-fx1tox2(s)[2][1] - fx2tol(s)[2][1])
         Q += s->(fx1tox2(s)[1][2] + fx2tol(s)[1][2])
