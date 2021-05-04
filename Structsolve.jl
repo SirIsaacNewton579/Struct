@@ -44,10 +44,8 @@ function forcecurves(F :: Function,x1,x2,l)
             ∫F = Vector{Function}(undef,4)
             pnapd = Vector{Function}(undef,4)
             for m = 1:4 
-                hfF = [lambdify(inp1[m][i]) for i = 0:2]
-                ∫F[m] = x->[hfF[i](x) for i = 1:3]
-                hfpa = [lambdify(pnapds[m][i]) for i = 0:2]
-                pnapd[m] = x->[hfpa[i](x) for i = 1:3]
+                ∫F[m] = x->[convert(Float64,inp1[m][i](x)) for i = 0:2]
+                pnapd[m] = x->[convert(Float64,pnapds[m][i](x)) for i = 0:2]
             end
             ∫F,pnapd
         catch
@@ -396,6 +394,15 @@ function internalforcedispsingle(node :: Vector{Vector{Float64}} ,
         fxtol = s->(s>=loac ? f1(s-loac) : fill(zeros(3),4))
         fxtol,s->fill(zeros(3),4)
     end
+    function build_forcecurves(loadi :: Uniformforce)
+        loac = loadi.loaction
+        x1 =  loac[1]*l;x2 = loac[2]*l;
+        F = loadi.fgol ? T*loadi.magnitude : loadi.magnitude
+        f = s->[F*s,F*s^2/2,F*s^3/6,F*s^4/24]
+        fx1tox2 = s->(x1<=s<=x2 ? f(s-x1) : fill(zeros(3),4))
+        fxtol = s->(x2<s<=l ? (f(s-x1)-f(s-x2)) : fill(zeros(3),4))
+        fx1tox2,fxtol
+    end
     fbase = leftsectionforcecurves(endpointforce[1:3])
     loadidx = loadoneli(load,i)
     loadidxlen = length(loadidx)
@@ -426,22 +433,22 @@ function plot_orign(node :: Vector{Vector{Float64}},el ::Vector{Element})
 end
 function plot_disp(st :: Struct)
     spforce,endpointforce,endpointdisplacement = solvestruct(st)
-    plot_disp(st,spforce,endpointforce,endpointdisplacement)
+    plot_disp(st,endpointforce,endpointdisplacement)
 end
 function plot_shear(st :: Struct)
     spforce,endpointforce,endpointdisplacement = solvestruct(st)
-    plot_shear(st,spforce,endpointforce,endpointdisplacement)
+    plot_shear(st,endpointforce,endpointdisplacement)
 end
 function plot_axis(st :: Struct)
     spforce,endpointforce,endpointdisplacement = solvestruct(st)
-    plot_axis(st,spforce,endpointforce,endpointdisplacement)
+    plot_axis(st,endpointforce,endpointdisplacement)
 end
 function plot_moment(st :: Struct)
     spforce,endpointforce,endpointdisplacement = solvestruct(st)
-    plot_moment(st,spforce,endpointforce,endpointdisplacement)
+    plot_moment(st,endpointforce,endpointdisplacement)
 end
 
-function plot_disp(st :: Struct,spforce :: Vector{Float64},
+function plot_disp(st :: Struct,
     endpointforce :: Vector{Vector{Float64}},
     endpointdisplacement :: Vector{Vector{Float64}})
 
@@ -465,7 +472,7 @@ function plot_disp(st :: Struct,spforce :: Vector{Float64},
     title("Displacement")
     axis("equal")
 end
-function plot_shear(st :: Struct,spforce :: Vector{Float64},
+function plot_shear(st :: Struct,
     endpointforce :: Vector{Vector{Float64}},
     endpointdisplacement :: Vector{Vector{Float64}})
 
@@ -490,7 +497,7 @@ function plot_shear(st :: Struct,spforce :: Vector{Float64},
     title("Shear Curve")
     axis("equal")
 end
-function plot_axis(st :: Struct,spforce :: Vector{Float64},
+function plot_axis(st :: Struct,
     endpointforce :: Vector{Vector{Float64}},
     endpointdisplacement :: Vector{Vector{Float64}})
 
@@ -515,7 +522,7 @@ function plot_axis(st :: Struct,spforce :: Vector{Float64},
     title("axial force Curve")
     axis("equal")
 end
-function plot_moment(st :: Struct,spforce :: Vector{Float64},
+function plot_moment(st :: Struct,
     endpointforce :: Vector{Vector{Float64}},
     endpointdisplacement :: Vector{Vector{Float64}})
     

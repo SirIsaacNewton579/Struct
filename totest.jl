@@ -1,8 +1,8 @@
 using LinearAlgebra
 using PyPlot
 
-include("Structdefine.jl")
-include("Structsolve.jl")
+includet("Structdefine.jl")
+includet("Structsolve.jl")
 
 
 st = Struct(
@@ -12,7 +12,7 @@ st = Struct(
     Element([3,4],1e9,1e-3,1e-6,[[true,true,true],[true,true,true]]),
     Element([1,4],1e9,1e-3,1e-6,[[true,true,false],[true,true,false]]),
     Element([2,3],1e9,1e-3,1e-6,[[true,true,false],[true,true,false]])],
-    [Disturbutionforce(4,[0,1],s->[0,-10e3+0*s,0],islc),Disturbutionforce(3,[0,1],s->[0,-10e3+0*s,0],islc),Disturbutionforce(3,[0,1],s->[10e3+0*s,0,0],islc)],
+    [Disturbutionforce(4,[0,1],s->[0,-0.5e3s^2,0],islc),Disturbutionforce(3,[0,1],s->[0,-1e3+0*s,0],islc),Disturbutionforce(3,[0,1],s->[1e3+0*s,0,0],islc)],
     [Support(1,[true,true,false]),Support(2,[true,true,false])]
 )
 
@@ -35,7 +35,7 @@ plot_moment(st)
 
 st2 = Struct([[0.0,0.0],[1.0,0.0]],
 [Element([1,2],1e9,1e-3,1e-6,[[true,true,false],[false,true,false]])],
-[Disturbutionforce(1,[0,1],s->[0,-10e3+0*s,0],isgb)],
+[Disturbutionforce(1,[0,1],s->[0,-1e3+0*s,0],isgb)],
 [Support(1,[true,true,false]),Support(2,[false,true,false])]
 )
 build_A(st2)
