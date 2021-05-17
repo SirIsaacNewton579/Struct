@@ -62,7 +62,7 @@ function forcecurves(F :: Function,x1,x2,l)
     end
 end
 
-function build_A_consider_support!(A,sp :: Vector{Support}, el :: Vector{Element})
+function build_A_consider_support!(A,sp :: Vector{Support}, el :: Vector{Element},load::Vector{Load},nvalue,svalue)
     spb = [sup.ncst for sup in sp]
     spbindex = findall.(spb)
     svalue = length.(spbindex)
@@ -103,6 +103,11 @@ function build_A_consider_support!(A,sp :: Vector{Support}, el :: Vector{Element
                         end
                     end
                 end
+                for nf in load
+                    if nf.fnode == i
+                        temp[end]+=nf.magnitude[j]
+                    end
+                end
                 #@show temp
                 (!iszero(temp) ? push!(A,temp) : nothing)
             end
@@ -111,7 +116,8 @@ function build_A_consider_support!(A,sp :: Vector{Support}, el :: Vector{Element
 end
 
 
-function build_A_consider_connect!(A,node :: Vector{Vector{Float64}},el :: Vector{Element},sp :: Vector{Support},nvalue,svalue)
+function build_A_consider_connect!(A,node::Vector{Vector{Float64}},el::Vector{Element},sp::Vector{Support},load::Vector{Load},
+    nvalue,svalue)
     #connect
     for i = 1:length(node)
         index = nodeonele(i,el)
@@ -134,6 +140,11 @@ function build_A_consider_connect!(A,node :: Vector{Vector{Float64}},el :: Vecto
                 temp = zeros(nvalue+1)
                 for n in m 
                     temp[sum(svalue)+(k[n]-1)*12+j+3+(index[k[n]][1]-1)*6] = 1  #force
+                end
+                for nf in load
+                    if nf.fnode == i
+                        temp[end]+=nf.magnitude[j]
+                    end
                 end
                 push!(A,temp)
             end
@@ -325,10 +336,10 @@ function build_A(node :: Vector{Vector{Float64}},
 
     A = Vector{Float64}[]
     #位置量顺序：支座力，[u1,v1,θ1,fx1,fy1,M1,u2,v2,θ2,fx2,fy2,M2]
-    
-    build_A_consider_support!(A,sp,el)
-    build_A_consider_connect!(A,node,el,sp,nvalue,svalue)
-    build_A_consider_equilibrium_and_displacement!(A,node,el,load,nvalue,svalue)
+    eloadidx = (e->isa(e,ElementLoad)).(load);eload = load[eloadidx];nload = load[(.!)(eloadidx)]
+    build_A_consider_support!(A,sp,el,nload,nvalue,svalue)
+    build_A_consider_connect!(A,node,el,sp,nload,nvalue,svalue)
+    build_A_consider_equilibrium_and_displacement!(A,node,el,eload,nvalue,svalue)
     A
 end
 function build_A(st::Struct)
@@ -361,7 +372,12 @@ function solvestruct(st)
     endpointdisplacement = [[sei[1:3];sei[7:9]] for sei in se]
     spforce,endpointforce,endpointdisplacement
 end
-
+function internalforcedispsingle(st::Struct,i::Int64)
+    node = st.globalcoordinate;el = st.element;load = st.load;
+    eloadidx = (e->isa(e,ElementLoad)).(load);eload = load[eloadidx];nload = load[(.!)(eloadidx)]
+    spforce,endpointforce,endpointdisplacement = solvestruct(st)
+    N,u,Q,M,θ,w = internalforcedispsingle(node,el[i],i,eload,endpointforce[i],endpointdisplacement[i])
+end
 function internalforcedispsingle(node :: Vector{Vector{Float64}} ,
     eli :: Element ,
     i :: Int64,
@@ -453,9 +469,9 @@ function plot_disp(st :: Struct,
     endpointdisplacement :: Vector{Vector{Float64}})
 
     node = st.globalcoordinate;el = st.element;load = st.load
-
+    eloadidx = (e->isa(e,ElementLoad)).(load);eload = load[eloadidx];nload = load[(.!)(eloadidx)]
     for i in 1:length(el)
-        ~,u,~,~,~,w = internalforcedispsingle(node,el[i],i,load,endpointforce[i],endpointdisplacement[i])
+        ~,u,~,~,~,w = internalforcedispsingle(node,el[i],i,eload,endpointforce[i],endpointdisplacement[i])
         node1 = el[i].enode[1];node2 = el[i].enode[2]
         gcn1 = node[node1];gcn2 = node[node2]
         l = norm(gcn2-gcn1)
@@ -477,9 +493,10 @@ function plot_shear(st :: Struct,
     endpointdisplacement :: Vector{Vector{Float64}})
 
     node = st.globalcoordinate;el = st.element;load = st.load
+    eloadidx = (e->isa(e,ElementLoad)).(load);eload = load[eloadidx];nload = load[(.!)(eloadidx)]
     fiction = 0.3*norm(node[1]-node[2])/maximum(abs.(reduce(hcat,endpointforce)))
     for i in 1:length(el)
-        ~,~,Q,~,~,~ = internalforcedispsingle(node,el[i],i,load,endpointforce[i],endpointdisplacement[i])
+        ~,~,Q,~,~,~ = internalforcedispsingle(node,el[i],i,eload,endpointforce[i],endpointdisplacement[i])
         node1 = el[i].enode[1];node2 = el[i].enode[2]
         gcn1 = node[node1];gcn2 = node[node2]
         l = norm(gcn2-gcn1)
@@ -502,9 +519,10 @@ function plot_axis(st :: Struct,
     endpointdisplacement :: Vector{Vector{Float64}})
 
     node = st.globalcoordinate;el = st.element;load = st.load
+    eloadidx = (e->isa(e,ElementLoad)).(load);eload = load[eloadidx];nload = load[(.!)(eloadidx)]
     fiction = 0.3*norm(node[1]-node[2])/maximum(abs.(reduce(hcat,endpointforce)))
     for i in 1:length(el)
-        N,~,~,~,~,~ = internalforcedispsingle(node,el[i],i,load,endpointforce[i],endpointdisplacement[i])
+        N,~,~,~,~,~ = internalforcedispsingle(node,el[i],i,eload,endpointforce[i],endpointdisplacement[i])
         node1 = el[i].enode[1];node2 = el[i].enode[2]
         gcn1 = node[node1];gcn2 = node[node2]
         l = norm(gcn2-gcn1)
@@ -526,10 +544,11 @@ function plot_moment(st :: Struct,
     endpointforce :: Vector{Vector{Float64}},
     endpointdisplacement :: Vector{Vector{Float64}})
     
-    node = st.globalcoordinate;el = st.element;load = st.load
+    node = st.globalcoordinate;el = st.element;load = st.load;
+    eloadidx = (e->isa(e,ElementLoad)).(load);eload = load[eloadidx];nload = load[(.!)(eloadidx)]
     fiction = 0.3*norm(node[1]-node[2])/maximum(abs.(reduce(hcat,endpointforce)))
     for i in 1:length(el)
-        ~,~,~,M,~,~ = internalforcedispsingle(node,el[i],i,load,endpointforce[i],endpointdisplacement[i])
+        ~,~,~,M,~,~ = internalforcedispsingle(node,el[i],i,eload,endpointforce[i],endpointdisplacement[i])
         node1 = el[i].enode[1];node2 = el[i].enode[2]
         gcn1 = node[node1];gcn2 = node[node2]
         l = norm(gcn2-gcn1)
@@ -544,6 +563,6 @@ function plot_moment(st :: Struct,
         xy = [gcn1 (T[1:2,1:2]\xye .+ gcn1) gcn2]
         plot(xy[1,:],xy[2,:], color="black", linewidth=2.5, linestyle="-")
     end
-    title("Monent Curve")
+    title("Moment Curve")
     axis("equal")
 end
