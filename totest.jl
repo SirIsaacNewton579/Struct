@@ -1,8 +1,8 @@
 using LinearAlgebra
 using PyPlot
 
-includet("Structdefine.jl")
-includet("Structsolve.jl")
+include("Structdefine.jl")
+include("Structsolve.jl")
 
 node = [[0.0,0.0],[2.0,0.0],[0.0,1.0],[2.0,1.0]]
 el = [Element([1,3],1e9,1e-3,1e-6,[[true,true,false],[true,true,true]]),

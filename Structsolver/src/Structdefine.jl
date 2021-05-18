@@ -78,3 +78,8 @@ function build_frame(enodes::Vector{Vector{Int64}},E::Vector{Float64},A::Vector{
     end
     el
 end
+function totruss!(el,tsfidx)
+    for i in tsfidx
+        el[i] = Element(el[i].enode,el[i].E,el[i].A,el[i].I,[[true,true,false],[true,true,false]])
+    end
+end

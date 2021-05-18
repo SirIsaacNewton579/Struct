@@ -849,6 +849,12 @@ git-tree-sha1 = "26ea43b4be7e919a2390c3c0f824e7eb4fc19a0a"
 uuid = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 version = "0.5.0"
 
+[[Structsolver]]
+deps = ["LinearAlgebra", "PyPlot"]
+path = "C:\\Users\\SirIsaacNewton\\Documents\\julia\\Struct\\Structsolver"
+uuid = "a0abb466-789c-477c-81b4-4587e8c6f070"
+version = "0.1.0"
+
 [[SuiteSparse]]
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"

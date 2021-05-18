@@ -404,7 +404,7 @@ function internalforcedispsingle(node :: Vector{Vector{Float64}} ,
         fx1tox2,fx2tol
     end
     function build_forcecurves(loadi :: Concentratedforce)
-        loac = loadi.loaction
+        loac = loadi.loaction*l
         F = loadi.fgol ? T*loadi.magnitude : loadi.magnitude
         f1 = leftsectionforcecurves(F)
         fxtol = s->(s>=loac ? f1(s-loac) : fill(zeros(3),4))
@@ -494,7 +494,7 @@ function plot_shear(st :: Struct,
 
     node = st.globalcoordinate;el = st.element;load = st.load
     eloadidx = (e->isa(e,ElementLoad)).(load);eload = load[eloadidx];nload = load[(.!)(eloadidx)]
-    fiction = 0.3*norm(node[1]-node[2])/maximum(abs.(reduce(hcat,endpointforce)))
+    fiction = 0.3*norm(maximum(node)-minimum(node))/maximum(abs.(reduce(hcat,endpointforce)))
     for i in 1:length(el)
         ~,~,Q,~,~,~ = internalforcedispsingle(node,el[i],i,eload,endpointforce[i],endpointdisplacement[i])
         node1 = el[i].enode[1];node2 = el[i].enode[2]
@@ -520,7 +520,7 @@ function plot_axis(st :: Struct,
 
     node = st.globalcoordinate;el = st.element;load = st.load
     eloadidx = (e->isa(e,ElementLoad)).(load);eload = load[eloadidx];nload = load[(.!)(eloadidx)]
-    fiction = 0.3*norm(node[1]-node[2])/maximum(abs.(reduce(hcat,endpointforce)))
+    fiction = 0.3*norm(maximum(node)-minimum(node))/maximum(abs.(reduce(hcat,endpointforce)))
     for i in 1:length(el)
         N,~,~,~,~,~ = internalforcedispsingle(node,el[i],i,eload,endpointforce[i],endpointdisplacement[i])
         node1 = el[i].enode[1];node2 = el[i].enode[2]
@@ -546,7 +546,7 @@ function plot_moment(st :: Struct,
     
     node = st.globalcoordinate;el = st.element;load = st.load;
     eloadidx = (e->isa(e,ElementLoad)).(load);eload = load[eloadidx];nload = load[(.!)(eloadidx)]
-    fiction = 0.3*norm(node[1]-node[2])/maximum(abs.(reduce(hcat,endpointforce)))
+    fiction = 0.3*norm(maximum(node)-minimum(node))/maximum(abs.(reduce(hcat,endpointforce)))
     for i in 1:length(el)
         ~,~,~,M,~,~ = internalforcedispsingle(node,el[i],i,eload,endpointforce[i],endpointdisplacement[i])
         node1 = el[i].enode[1];node2 = el[i].enode[2]
