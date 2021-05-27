@@ -1,3 +1,4 @@
+using PyPlot,LinearAlgebra
 using TaylorSeries ; Ts = TaylorSeries
 using SymPy; Sp = SymPy
 import Base.+

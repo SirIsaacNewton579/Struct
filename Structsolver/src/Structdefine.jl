@@ -83,3 +83,17 @@ function totruss!(el,tsfidx)
         el[i] = Element(el[i].enode,el[i].E,el[i].A,el[i].I,[[true,true,false],[true,true,false]])
     end
 end
+function build_fix(sn::Vector{Int64})
+    sp=Vector{Support}(undef,length(sn))
+    for i=1:length(sn)
+        sp[i]=Support(sn[i],fill(true,3))
+    end
+    sp
+end
+function build_hinge(sn::Vector{Int64})
+    sp=Vector{Support}(undef,length(sn))
+    for i=1:length(sn)
+        sp[i]=Support(sn[i],[true,true,false])
+    end
+    sp
+end
