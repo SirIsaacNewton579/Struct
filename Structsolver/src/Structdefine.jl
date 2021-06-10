@@ -20,7 +20,9 @@ struct Concentratedforce <: ElementLoad
     magnitude :: Vector{Float64}
     fgol :: Bool
 end
-
+function Concentratedforce(elc,loac,mag;fgol=isgb)
+    Concentratedforce(elc,loac,mag,fgol)
+end
 
 struct Disturbutionforce <: ElementLoad
     elementcode :: Int64
@@ -28,16 +30,25 @@ struct Disturbutionforce <: ElementLoad
     magnitude :: Function
     fgol :: Bool
 end
+function Disturbutionforce(elc,loac,mag;fgol=isgb)
+    Disturbutionforce(elc,loac,mag,fgol)
+end
 struct Uniformforce <: ElementLoad
     elementcode :: Int64
     loaction :: Vector{Float64}
     magnitude :: Vector{Float64}
     fgol :: Bool
 end
-
+function Uniformforce(elc,loac,mag;fgol=isgb)
+    Uniformforce(elc,loac,mag,fgol)
+end
 struct Support
     snode :: Int64
     ncst :: Vector{Bool}
+    angle :: Float64
+end
+function Support(sn,nc;ag=0.0)
+    Support(sn,nc,ag)
 end
 
 struct Struct

@@ -3,7 +3,7 @@ using TaylorSeries ; Ts = TaylorSeries
 using SymPy; Sp = SymPy
 import Base.+
 (+)(f::Function,g::Function) = x->(f(x)+g(x))
-
+PyPlot.pygui(true)
 function nodeonele(i::Int64,els::Vector{Element})
     n = length(els)
     barindex = findall.([(els[ii].enode .== i) for ii = 1:n])
@@ -63,7 +63,7 @@ function forcecurves(F :: Function,x1,x2,l)
     end
 end
 
-function build_A_consider_support!(A,sp :: Vector{Support}, el :: Vector{Element},load::Vector{Load},nvalue,svalue)
+function build_A_consider_support!(A,sp :: Vector{Support}, el :: Vector{Element},load::Vector{Load})
     spb = [sup.ncst for sup in sp]
     spbindex = findall.(spb)
     svalue = length.(spbindex)
@@ -74,8 +74,13 @@ function build_A_consider_support!(A,sp :: Vector{Support}, el :: Vector{Element
             for j in spbindex[i]
                 k = findall((.!)(isempty.(index)))
                 n = findfirst([el[m].constraint[index[m][1]][j] for m in k])
+                ag=sp[i].angle;T=[cos(ag) sin(ag);-sin(ag) cos(ag)]
                 temp = zeros(nvalue+1)
-                temp[sum(svalue)+(k[n]-1)*12+j+(index[k[n]][1]-1)*6] = 1  #displacement
+                if j in [1;2]
+                    temp[(1:2) .+ (sum(svalue)+(k[n]-1)*12+(index[k[n]][1]-1)*6)] = T[j,:]  #displacement
+                else
+                    temp[sum(svalue)+(k[n]-1)*12+(index[k[n]][1]-1)*6+j] = 1
+                end
                 push!(A,temp)
             end
         end
@@ -100,13 +105,23 @@ function build_A_consider_support!(A,sp :: Vector{Support}, el :: Vector{Element
                 for k = 1:length(index)
                     if !isempty(index[k])
                         if (el[k].constraint[index[k][1]][j])
-                            temp[sum(svalue)+(k-1)*12+3+j+(index[k][1]-1)*6] = -1   #force
+                            if j in [1;2]
+                                ag=sp[i].angle;T=[cos(ag) sin(ag);-sin(ag) cos(ag)]
+                                temp[[1;2] .+ (sum(svalue)+(k-1)*12+3+(index[k][1]-1)*6)] = -T[j,:]   #force
+                            else
+                                temp[sum(svalue)+(k-1)*12+3+(index[k][1]-1)*6+3] = -1
+                            end
                         end
                     end
                 end
                 for nf in load
-                    if nf.fnode == i
-                        temp[end]+=nf.magnitude[j]
+                    if isa(nf,Nodeforce) && (nf.fnode == i)
+                        if j in [1;2]
+                            ag=sp[i].angle;T=[cos(ag) sin(ag);-sin(ag) cos(ag)]
+                            temp[end]+=(T*nf.magnitude[1:2])[j]
+                        else
+                            temp[end]+=nf.magnitude[j]
+                        end
                     end
                 end
                 #@show temp
@@ -338,7 +353,7 @@ function build_A(node :: Vector{Vector{Float64}},
     A = Vector{Float64}[]
     #位置量顺序：支座力，[u1,v1,θ1,fx1,fy1,M1,u2,v2,θ2,fx2,fy2,M2]
     eloadidx = (e->isa(e,ElementLoad)).(load);eload = load[eloadidx];nload = load[(.!)(eloadidx)]
-    build_A_consider_support!(A,sp,el,nload,nvalue,svalue)
+    build_A_consider_support!(A,sp,el,nload)
     build_A_consider_connect!(A,node,el,sp,nload,nvalue,svalue)
     build_A_consider_equilibrium_and_displacement!(A,node,el,eload,nvalue,svalue)
     A
@@ -369,14 +384,16 @@ function solvestruct(st)
     ssval = sum(svalue)
     spforce = x[1:ssval]
     se = [x[ssval+1+12(i-1):ssval+12+12(i-1)] for i =1:length(el)]
+    node_index = [nodeonele(i,el) for i = 1:length(node)]
+    nodedisp = [se[findfirst(!isempty,ni)][(1:2) .+ 6*(first(ni[findfirst(!isempty,ni)])-1)] for ni in node_index]
     endpointforce = [[sei[4:6];sei[10:12]] for sei in se]
     endpointdisplacement = [[sei[1:3];sei[7:9]] for sei in se]
-    spforce,endpointforce,endpointdisplacement
+    nodedisp,spforce,endpointforce,endpointdisplacement
 end
 function internalforcedispsingle(st::Struct,i::Int64)
     node = st.globalcoordinate;el = st.element;load = st.load;
     eloadidx = (e->isa(e,ElementLoad)).(load);eload = load[eloadidx];nload = load[(.!)(eloadidx)]
-    spforce,endpointforce,endpointdisplacement = solvestruct(st)
+    ~,spforce,endpointforce,endpointdisplacement = solvestruct(st)
     N,u,Q,M,θ,w = internalforcedispsingle(node,el[i],i,eload,endpointforce[i],endpointdisplacement[i])
 end
 function internalforcedispsingle(node :: Vector{Vector{Float64}} ,
@@ -449,19 +466,19 @@ function plot_orign(node :: Vector{Vector{Float64}},el ::Vector{Element})
     end
 end
 function plot_disp(st :: Struct)
-    spforce,endpointforce,endpointdisplacement = solvestruct(st)
+    ~,spforce,endpointforce,endpointdisplacement = solvestruct(st)
     plot_disp(st,endpointforce,endpointdisplacement)
 end
 function plot_shear(st :: Struct)
-    spforce,endpointforce,endpointdisplacement = solvestruct(st)
+    ~,spforce,endpointforce,endpointdisplacement = solvestruct(st)
     plot_shear(st,endpointforce,endpointdisplacement)
 end
 function plot_axis(st :: Struct)
-    spforce,endpointforce,endpointdisplacement = solvestruct(st)
+    ~,spforce,endpointforce,endpointdisplacement = solvestruct(st)
     plot_axis(st,endpointforce,endpointdisplacement)
 end
 function plot_moment(st :: Struct)
-    spforce,endpointforce,endpointdisplacement = solvestruct(st)
+    ~,spforce,endpointforce,endpointdisplacement = solvestruct(st)
     plot_moment(st,endpointforce,endpointdisplacement)
 end
 
@@ -521,7 +538,7 @@ function plot_axis(st :: Struct,
 
     node = st.globalcoordinate;el = st.element;load = st.load
     eloadidx = (e->isa(e,ElementLoad)).(load);eload = load[eloadidx];nload = load[(.!)(eloadidx)]
-    fiction = 0.3*norm(maximum(node)-minimum(node))/maximum(abs.(reduce(hcat,endpointforce)))
+    fiction = 0.05*norm(maximum(node)-minimum(node))/maximum(abs.(reduce(hcat,endpointforce)))
     for i in 1:length(el)
         N,~,~,~,~,~ = internalforcedispsingle(node,el[i],i,eload,endpointforce[i],endpointdisplacement[i])
         node1 = el[i].enode[1];node2 = el[i].enode[2]
